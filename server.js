@@ -31,30 +31,38 @@ pool.getConnection((err, conn) => {
 /* ---------------------------
    CORS (allow localhost + Vercel)
 --------------------------- */
-const allowedOrigins = new Set([
-    'http://localhost:3000',
-    'http://localhost:5173',                 // if you ever use Vite
-    'https://workout-tracker-flame.vercel.app', // <- NO TRAILING SLASH
-  ]);
-  
-  app.use(cors({
-    origin: (origin, cb) => {
-      // Same-origin/no-origin (health checks, curl)
-      if (!origin) return cb(null, true);
-  
-      // Exact allow-list OR any *.vercel.app preview
-      if (allowedOrigins.has(origin) || origin.endsWith('.vercel.app')) {
-        return cb(null, true);
-      }
-      return cb(new Error('CORS blocked: ' + origin), false);
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
-  }));
-  
-  // Preflight
-  app.options('*', cors());
+const ALLOW_VERCEL_HOST = 'workout-tracker-flame.vercel.app'; // your vercel domain
+const ALLOW_GHPAGES_HOST = 'jcovi.github.io';                  // only if you need it
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // health checks, curl, server-to-server
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (protocol !== 'http:' && protocol !== 'https:') return false;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (hostname.endsWith('.vercel.app')) return true;
+    if (hostname === ALLOW_VERCEL_HOST) return true;
+
+    // uncomment this if you truly need GitHub Pages to call your API
+    if (hostname === ALLOW_GHPAGES_HOST) return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    console.error('CORS blocked:', origin);
+    return cb(new Error('CORS blocked: ' + origin), false);
+  },
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
+app.options('*', cors());
 /* ---------------------------
    Middleware & static
 --------------------------- */
