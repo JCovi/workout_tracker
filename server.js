@@ -1,42 +1,67 @@
+// server.js
 const express = require('express');
 const mysql = require('mysql2');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+
+// CORS: allow localhost and your Vercel domain
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://YOUR-VERCEL-DOMAIN.vercel.app',
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, cb) {
+    // allow same-origin or tools with no origin (like curl)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS blocked: ' + origin), false);
+  },
+  credentials: false
+}));
 
 app.use(express.json());
+
+// Keep static for local dev; harmless in prod
 app.use(express.static('public'));
 
-// MySQL connection (from .env)
-const db = mysql.createConnection({
-    host: process.env.MYSQL_HOST,
-    port: Number(process.env.MYSQL_PORT || 3306),
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE
+// MySQL connection (pool is safer in prod)
+const dbConfig = {
+  host: process.env.MYSQL_HOST,
+  port: Number(process.env.MYSQL_PORT || 3306),
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
+
+// Optional SSL (PlanetScale/managed MySQL often requires this)
+if (process.env.MYSQL_SSL === 'true') {
+  dbConfig.ssl = { rejectUnauthorized: true };
+}
+
+const pool = mysql.createPool(dbConfig);
+
+// Health checks
+app.get('/', (_req, res) => res.send('Server is running!'));
+app.get('/healthz', (_req, res) => {
+  pool.query('SELECT 1', (err) => {
+    if (err) return res.status(500).json({ ok: false, error: err.message });
+    res.json({ ok: true });
   });
-
-db.connect(err => {
-  if (err) {
-    console.error('Database connection failed:', err);
-    return;
-  }
-  console.log('Connected to MySQL database.');
-});
-
-// Test route
-app.get('/', (req, res) => {
-  res.send('Server is running!');
 });
 
 // --- helpers ---
 const isInt = (v) => Number.isInteger(v);
 const inRange = (v, min, max) => isInt(v) && v >= min && v <= max;
 
-// GET days (optional helper for UI)
-app.get('/days', (req, res) => {
-  db.query('SELECT * FROM days ORDER BY position', (err, rows) => {
+// GET days
+app.get('/days', (_req, res) => {
+  pool.query('SELECT * FROM days ORDER BY position', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -47,7 +72,7 @@ app.get('/exercises', (req, res) => {
   const dayId = Number(req.query.day_id);
   if (!isInt(dayId)) return res.status(400).json({ error: 'day_id required (int)' });
 
-  db.execute(
+  pool.execute(
     'SELECT * FROM exercises WHERE day_id = ? ORDER BY position, id',
     [dayId],
     (err, rows) => {
@@ -69,7 +94,7 @@ app.post('/exercises', (req, res) => {
   if (!isInt(w) || w < 0 || !isInt(r) || r < 0)
     return res.status(400).json({ error: 'weight_lbs>=0, rest_seconds>=0 (ints)' });
 
-  db.execute(
+  pool.execute(
     `INSERT INTO exercises (day_id, name, sets, reps, weight_lbs, rest_seconds, position)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [day_id, name, sets, reps, w, r, Number(position) || 0],
@@ -105,7 +130,7 @@ app.put('/exercises/:id', (req, res) => {
   if (!fields.length) return res.status(400).json({ error: 'No valid fields to update' });
 
   values.push(id);
-  db.execute(`UPDATE exercises SET ${fields.join(', ')} WHERE id = ?`, values, (err, r) => {
+  pool.execute(`UPDATE exercises SET ${fields.join(', ')} WHERE id = ?`, values, (err, r) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ updated: r.affectedRows });
   });
@@ -116,24 +141,26 @@ app.delete('/exercises/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!isInt(id)) return res.status(400).json({ error: 'id must be int' });
 
-  db.execute('DELETE FROM exercises WHERE id = ?', [id], (err, r) => {
+  pool.execute('DELETE FROM exercises WHERE id = ?', [id], (err, r) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ deleted: r.affectedRows });
   });
 });
 
 // Test DB route
-app.get('/db/test', (req, res) => {
-    db.query('SELECT * FROM days ORDER BY position', (err, results) => {
-      if (err) {
-        console.error(err);
-        res.status(500).send('Database query failed');
-        return;
-      }
-      res.json(results);
-    });
+app.get('/db/test', (_req, res) => {
+  pool.query('SELECT * FROM days ORDER BY position', (err, results) => {
+    if (err) return res.status(500).send('Database query failed');
+    res.json(results);
   });
-
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
 });
+
+// Port must be dynamic in prod
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+// Optional: basic error logging
+process.on('unhandledRejection', (e) => console.error('UnhandledRejection', e));
+process.on('uncaughtException', (e) => console.error('UncaughtException', e));
