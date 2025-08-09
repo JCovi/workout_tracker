@@ -92,9 +92,12 @@ button:hover { background: #e14b4b; }
     padding: 6px 0;
     border-bottom: 1px solid #eee;
 }
-.row:first-of-type {
+.day-body .row:first-of-type {
     font-weight: 700;
     color: #444;
+}
+.row {
+    font-weight: normal;
 }
 
 /* Inputs */
