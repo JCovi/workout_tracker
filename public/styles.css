@@ -177,3 +177,7 @@ input[type="number"], select, input[type="text"] {
 
 /* Utility */
 .hidden { display: none !important; }
+
+.day-body .row {
+    font-weight: bold;
+}
