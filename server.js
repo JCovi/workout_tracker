@@ -6,15 +6,22 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS: allow localhost and your Vercel domain
+// Ensure MYSQL_URL is set
+if (!process.env.MYSQL_URL) {
+  console.error('Missing MYSQL_URL environment variable. Set it to your Railway MySQL connection string.');
+  process.exit(1);
+}
+
+// CORS: allow localhost and your Vercel domain (replace placeholder with your actual Vercel URL)
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://YOUR-VERCEL-DOMAIN.vercel.app',
+  'https://workout-tracker-flame.vercel.app/', // <-- replace with your Vercel deploy URL
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, cb) {
-    if (!origin) return cb(null, true); // allow same-origin or no origin (curl, etc.)
+    // allow same-origin/no-origin (curl, health checks)
+    if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('CORS blocked: ' + origin), false);
   },
@@ -22,13 +29,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.static('public')); // static for local dev
+app.use(express.static('public')); // serves frontend if present in /public
 
-// --- MySQL connection using MYSQL_URL ---
-/**
- * process.env.MYSQL_URL should be set in Render to the
- * full connection string from Railway (click Connect → copy)
- */
+// MySQL connection using single connection string (Railway)
 const pool = mysql.createPool(process.env.MYSQL_URL);
 
 // --- helpers ---
@@ -37,7 +40,7 @@ const inRange = (v, min, max) => isInt(v) && v >= min && v <= max;
 
 // --- routes ---
 
-// Health checks
+// Basic health
 app.get('/', (_req, res) => res.send('Server is running!'));
 app.get('/healthz', (_req, res) => {
   pool.query('SELECT 1', (err) => {
@@ -55,6 +58,7 @@ app.get('/days', (_req, res) => {
 });
 
 // GET exercises for a given day
+// /exercises?day_id=1
 app.get('/exercises', (req, res) => {
   const dayId = Number(req.query.day_id);
   if (!isInt(dayId)) return res.status(400).json({ error: 'day_id required (int)' });

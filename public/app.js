@@ -2,12 +2,19 @@
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
+// Determine API base (local vs. production)
+// Replace the URL below with your actual Render backend URL.
+const API_BASE =
+  window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : 'https://YOUR-RENDER-SERVICE.onrender.com';
+
 // API
 const api = {
-  days: () => fetch('/days').then(r => r.json()),
-  exercises: (day_id) => fetch(`/exercises?day_id=${day_id}`).then(r => r.json()),
+  days: () => fetch(`${API_BASE}/days`).then(r => r.json()),
+  exercises: (day_id) => fetch(`${API_BASE}/exercises?day_id=${day_id}`).then(r => r.json()),
   addExercise: (payload) =>
-    fetch('/exercises', {
+    fetch(`${API_BASE}/exercises`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -177,7 +184,7 @@ async function loadExercisesInto(card, dayId) {
     $('.del-btn', line).addEventListener('click', async () => {
       const sure = confirm(`Delete "${ex.name}"?`);
       if (!sure) return;
-      const res = await fetch(`/exercises/${ex.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/exercises/${ex.id}`, { method: 'DELETE' });
       if (!res.ok) { alert('Delete failed'); return; }
       await loadExercisesInto(card, dayId);
     });
@@ -200,7 +207,7 @@ async function loadExercisesInto(card, dayId) {
       if (!Number.isInteger(rest_seconds) || rest_seconds < 0) { alert('Rest must be ≥ 0'); return; }
 
       const body = { name, sets, reps, weight_lbs, rest_seconds };
-      const res = await fetch(`/exercises/${ex.id}`, {
+      const res = await fetch(`${API_BASE}/exercises/${ex.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
