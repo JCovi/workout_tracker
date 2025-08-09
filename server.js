@@ -1,5 +1,6 @@
 const express = require('express');
 const mysql = require('mysql2');
+require('dotenv').config();
 
 const app = express();
 const port = 3000;
@@ -7,13 +8,14 @@ const port = 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
-// MySQL connection
+// MySQL connection (from .env)
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'workout_user',
-  password: 'jcovi',
-  database: 'workout_tracker'
-});
+    host: process.env.MYSQL_HOST,
+    port: Number(process.env.MYSQL_PORT || 3306),
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_DATABASE
+  });
 
 db.connect(err => {
   if (err) {
