@@ -14,8 +14,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, cb) {
-    // allow same-origin or tools with no origin (like curl)
-    if (!origin) return cb(null, true);
+    if (!origin) return cb(null, true); // allow same-origin or no origin (curl, etc.)
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('CORS blocked: ' + origin), false);
   },
@@ -23,28 +22,20 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.static('public')); // static for local dev
 
-// Keep static for local dev; harmless in prod
-app.use(express.static('public'));
+// --- MySQL connection using MYSQL_URL ---
+/**
+ * process.env.MYSQL_URL should be set in Render to the
+ * full connection string from Railway (click Connect → copy)
+ */
+const pool = mysql.createPool(process.env.MYSQL_URL);
 
-// MySQL connection (pool is safer in prod)
-const dbConfig = {
-  host: process.env.MYSQL_HOST,
-  port: Number(process.env.MYSQL_PORT || 3306),
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+// --- helpers ---
+const isInt = (v) => Number.isInteger(v);
+const inRange = (v, min, max) => isInt(v) && v >= min && v <= max;
 
-// Optional SSL (PlanetScale/managed MySQL often requires this)
-if (process.env.MYSQL_SSL === 'true') {
-  dbConfig.ssl = { rejectUnauthorized: true };
-}
-
-const pool = mysql.createPool(dbConfig);
+// --- routes ---
 
 // Health checks
 app.get('/', (_req, res) => res.send('Server is running!'));
@@ -55,11 +46,7 @@ app.get('/healthz', (_req, res) => {
   });
 });
 
-// --- helpers ---
-const isInt = (v) => Number.isInteger(v);
-const inRange = (v, min, max) => isInt(v) && v >= min && v <= max;
-
-// GET days
+// GET all days
 app.get('/days', (_req, res) => {
   pool.query('SELECT * FROM days ORDER BY position', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -67,7 +54,7 @@ app.get('/days', (_req, res) => {
   });
 });
 
-// GET exercises for a day: /exercises?day_id=1
+// GET exercises for a given day
 app.get('/exercises', (req, res) => {
   const dayId = Number(req.query.day_id);
   if (!isInt(dayId)) return res.status(400).json({ error: 'day_id required (int)' });
@@ -82,7 +69,7 @@ app.get('/exercises', (req, res) => {
   );
 });
 
-// POST create exercise (JSON body)
+// POST create exercise
 app.post('/exercises', (req, res) => {
   const { day_id, name, sets, reps, weight_lbs = 0, rest_seconds = 0, position = 0 } = req.body;
 
@@ -105,15 +92,15 @@ app.post('/exercises', (req, res) => {
   );
 });
 
-// PUT update exercise by id (partial updates allowed)
+// PUT update exercise
 app.put('/exercises/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!isInt(id)) return res.status(400).json({ error: 'id must be int' });
 
   const fields = [];
   const values = [];
-
   const allow = ['name', 'sets', 'reps', 'weight_lbs', 'rest_seconds', 'position', 'day_id'];
+
   for (const k of allow) {
     if (req.body[k] !== undefined) {
       if (k === 'sets' && !inRange(req.body[k], 1, 10)) return res.status(400).json({ error: 'sets 1-10' });
@@ -136,7 +123,7 @@ app.put('/exercises/:id', (req, res) => {
   });
 });
 
-// DELETE exercise by id
+// DELETE exercise
 app.delete('/exercises/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!isInt(id)) return res.status(400).json({ error: 'id must be int' });
@@ -155,12 +142,12 @@ app.get('/db/test', (_req, res) => {
   });
 });
 
-// Port must be dynamic in prod
+// Listen on dynamic port in prod
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-// Optional: basic error logging
+// Basic error logging
 process.on('unhandledRejection', (e) => console.error('UnhandledRejection', e));
 process.on('uncaughtException', (e) => console.error('UncaughtException', e));
