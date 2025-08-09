@@ -32,30 +32,28 @@ pool.getConnection((err, conn) => {
    CORS (allow localhost + Vercel)
 --------------------------- */
 const allowedOrigins = new Set([
-  'http://localhost:3000',
-  'http://localhost:5173',            // if you ever use Vite locally
-  'https://workout-tracker-flame.vercel.app', // your Vercel frontend
-]);
-
-app.use(cors({
-  origin: (origin, cb) => {
-    // Same-origin / server-to-server / curl have no Origin header -> allow
-    if (!origin) return cb(null, true);
-
-    // Exact allow-list
-    if (allowedOrigins.has(origin)) return cb(null, true);
-
-    // Any of your preview deploys like https://foo-bar.vercel.app
-    if (origin.endsWith('.vercel.app')) return cb(null, true);
-
-    return cb(new Error('CORS blocked: ' + origin), false);
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-}));
-
-// Handle preflight quickly
-app.options('*', cors());
+    'http://localhost:3000',
+    'http://localhost:5173',                 // if you ever use Vite
+    'https://workout-tracker-flame.vercel.app', // <- NO TRAILING SLASH
+  ]);
+  
+  app.use(cors({
+    origin: (origin, cb) => {
+      // Same-origin/no-origin (health checks, curl)
+      if (!origin) return cb(null, true);
+  
+      // Exact allow-list OR any *.vercel.app preview
+      if (allowedOrigins.has(origin) || origin.endsWith('.vercel.app')) {
+        return cb(null, true);
+      }
+      return cb(new Error('CORS blocked: ' + origin), false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+  }));
+  
+  // Preflight
+  app.options('*', cors());
 
 /* ---------------------------
    Middleware & static
