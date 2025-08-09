@@ -31,14 +31,14 @@ h1 {
 button {
     padding: 8px 14px;
     border: none;
-    background: #ff5f5f;
+    background: #daa71b;
     color: #fff;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
 }
-button:hover { background: #e14b4b; }
+button:hover { background: #daa71b; }
 
 /* Days container */
 #days {
@@ -48,6 +48,26 @@ button:hover { background: #e14b4b; }
     gap: 16px;
 }
 
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    #days {
+        padding: 0 10px; /* space on sides */
+    }
+    .day {
+        width: 100%; /* take full width */
+    }
+    /* Stack exercise info vertically */
+    .row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 8px 0;
+    }
+    .row > * {
+        width: 100%;
+    }
+}
 /* Card styling */
 .day {
     border-radius: 12px;
@@ -68,7 +88,7 @@ button:hover { background: #e14b4b; }
     align-items: center;
     padding: 14px 18px;
     cursor: pointer;
-    background: #ff5f5f;
+    background: #daa71b;
     color: #fff;
 }
 .day-header h2 {
