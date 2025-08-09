@@ -24,65 +24,117 @@ function makeSelect(options, value){
 }
 
 function dayCard(day){
-  const wrap = document.createElement('section');
-  wrap.className = 'day';
-  wrap.dataset.dayId = day.id;
-  wrap.innerHTML = `
-    <div class="day-header" role="button" aria-expanded="false">
-      <h2>${day.name}</h2>
-      <span class="chev">▶</span>
-    </div>
-    <div class="day-body">
-      <div class="row" style="font-weight:600;color:#444;">
-        <div>Exercise</div><div>Sets</div><div>Reps</div><div>Weight (lb)</div><div>Rest (sec)</div><div></div>
+    const wrap = document.createElement('section');
+    wrap.className = 'day';
+    wrap.dataset.dayId = day.id;
+  
+    wrap.innerHTML = `
+      <div class="day-header" role="button" aria-expanded="false">
+        <h2>${day.name}</h2>
+        <span class="chev">▶</span>
       </div>
-      <div class="rows"></div>
-      <div class="controls">
-        <input type="text" placeholder="Exercise name" class="name" />
-        <select class="sets"></select>
-        <select class="reps"></select>
-        <input type="number" class="weight" min="0" step="1" value="0" />
-        <input type="number" class="rest" min="0" step="5" value="90" />
-        <button class="add-btn">Add</button>
+  
+      <div class="day-body">
+        <div class="row" style="font-weight:600;color:#444;">
+          <div>Exercise</div><div>Sets</div><div>Reps</div><div>Weight (lb)</div><div>Rest (sec)</div><div></div>
+        </div>
+  
+        <div class="rows"></div>
+  
+        <!-- ADD controls -->
+        <div class="add-controls" style="margin-top:8px;">
+          <!-- Visible trigger -->
+          <button class="show-add" type="button">Add</button>
+  
+          <!-- Hidden input row -->
+          <div class="add-row hidden" style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+            <input type="text" placeholder="Exercise name" class="name" />
+            <select class="sets"></select>
+            <select class="reps"></select>
+            <input type="number" class="weight" min="0" step="1" value="0" />
+            <input type="number" class="rest"   min="0" step="5" value="90" />
+  
+            <div class="form-actions">
+              <button class="save-add" type="button">Save</button>
+              <button class="cancel-add" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  `;
-
-  // fill selects
-  const setsSel = $('.sets', wrap); setsOptions.forEach(v=>setsSel.append(new Option(v, v)));
-  const repsSel = $('.reps', wrap); repsOptions.forEach(v=>repsSel.append(new Option(v, v)));
-
-  // toggle
-  $('.day-header', wrap).addEventListener('click', () => {
-    const open = wrap.classList.toggle('open');
-    $('.day-header', wrap).setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-
-  // add handler
-  $('.add-btn', wrap).addEventListener('click', async () => {
-    const payload = {
-      day_id: day.id,
-      name: $('.name', wrap).value.trim(),
-      sets: Number($('.sets', wrap).value),
-      reps: Number($('.reps', wrap).value),
-      weight_lbs: Number($('.weight', wrap).value || 0),
-      rest_seconds: Number($('.rest', wrap).value || 0),
-      position: 0
-    };
-    if (!payload.name) { alert('Enter exercise name'); return; }
-    if (!(payload.sets >= 1 && payload.sets <= 10)) { alert('Sets must be 1–10'); return; }
-    if (!(payload.reps >= 1 && payload.reps <= 20)) { alert('Reps must be 1–20'); return; }
-    if (!Number.isInteger(payload.weight_lbs) || payload.weight_lbs < 0) { alert('Weight must be ≥ 0'); return; }
-    if (!Number.isInteger(payload.rest_seconds) || payload.rest_seconds < 0) { alert('Rest must be ≥ 0'); return; }
-    
-    const res = await api.addExercise(payload);
-    if (res.error) { alert(res.error); return; }
-    await loadExercisesInto(wrap, day.id);
-    $('.name', wrap).value = '';
-  });
-
-  return wrap;
-}
+    `;
+  
+    // fill selects (1..10 and 1..20)
+    const setsSel = $('.sets', wrap);  setsOptions.forEach(v => setsSel.append(new Option(v, v)));
+    const repsSel = $('.reps', wrap);  repsOptions.forEach(v => repsSel.append(new Option(v, v)));
+  
+    // expand/collapse day
+    $('.day-header', wrap).addEventListener('click', () => {
+      const open = wrap.classList.toggle('open');
+      $('.day-header', wrap).setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  
+    // === Show/Hide/Save wiring ===
+    const showBtn   = $('.show-add',   wrap);
+    const addRow    = $('.add-row',    wrap);
+    const saveBtn   = $('.save-add',   wrap);
+    const cancelBtn = $('.cancel-add', wrap);
+  
+    const nameEl    = $('.name',   wrap);
+    const setsEl    = $('.sets',   wrap);
+    const repsEl    = $('.reps',   wrap);
+    const weightEl  = $('.weight', wrap);
+    const restEl    = $('.rest',   wrap);
+  
+    // Show inputs
+    showBtn.addEventListener('click', () => {
+      addRow.classList.remove('hidden');
+      showBtn.classList.add('hidden');
+      nameEl.focus();
+    });
+  
+    // Cancel and hide again
+    cancelBtn.addEventListener('click', () => {
+      addRow.classList.add('hidden');
+      showBtn.classList.remove('hidden');
+    });
+  
+    // Save (replaces your old ".add-btn" handler)
+    saveBtn.addEventListener('click', async () => {
+      const payload = {
+        day_id: day.id,
+        name:  nameEl.value.trim(),
+        sets:  Number(setsEl.value),
+        reps:  Number(repsEl.value),
+        weight_lbs:   Number(weightEl.value || 0),
+        rest_seconds: Number(restEl.value || 0),
+        position: 0
+      };
+  
+      // VALIDATION (same as before)
+      if (!payload.name) { alert('Enter exercise name'); return; }
+      if (!(payload.sets >= 1 && payload.sets <= 10)) { alert('Sets must be 1–10'); return; }
+      if (!(payload.reps >= 1 && payload.reps <= 20)) { alert('Reps must be 1–20'); return; }
+      if (!Number.isInteger(payload.weight_lbs) || payload.weight_lbs < 0) { alert('Weight must be ≥ 0'); return; }
+      if (!Number.isInteger(payload.rest_seconds) || payload.rest_seconds < 0) { alert('Rest must be ≥ 0'); return; }
+  
+      const res = await api.addExercise(payload);
+      if (res.error) { alert(res.error); return; }
+  
+      await loadExercisesInto(wrap, day.id);
+  
+      // clear + hide
+      nameEl.value = '';
+      setsEl.value = '1';
+      repsEl.value = '1';
+      weightEl.value = '0';
+      restEl.value = '90';
+  
+      addRow.classList.add('hidden');
+      showBtn.classList.remove('hidden');
+    });
+  
+    return wrap;
+  }
 
 async function loadExercisesInto(card, dayId){
     const rows = $('.rows', card);

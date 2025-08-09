@@ -33,3 +33,8 @@ input[type="number"], select, input[type="text"] { width:100%; padding:6px 8px; 
   .del-btn { border-color:#f3d1d1; }
   .del-btn:hover { background:#ffecec; }
   
+  .hidden { display: none !important; }
+
+.form-actions { display:flex; gap:8px; }
+.show-add { padding:6px 12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer; }
+.show-add:hover { background:#eef7ff; }
