@@ -4,8 +4,8 @@
 /* Background gradient for workout vibe */
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    color: #111;
-    background: linear-gradient(135deg, #1a1f3c, #2b5876);
+    color: #e6edf3;
+    background: linear-gradient(135deg, #0b1020, #132a3e);
     min-height: 100vh;
 }
 
@@ -15,8 +15,8 @@ header {
     gap: 12px;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 14, 25, 0.6);
     backdrop-filter: blur(8px);
     position: sticky;
     top: 0;
@@ -31,14 +31,14 @@ h1 {
 button {
     padding: 8px 14px;
     border: none;
-    background: #daa71b;
+    background: #00d4ff;
     color: #fff;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
 }
-button:hover { background: #daa71b; }
+button:hover { background: #00b4e6; }
 
 /* Days container */
 #days {
@@ -71,7 +71,7 @@ button:hover { background: #daa71b; }
 /* Card styling */
 .day {
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(17, 20, 35, 0.9);
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -88,7 +88,7 @@ button:hover { background: #daa71b; }
     align-items: center;
     padding: 14px 18px;
     cursor: pointer;
-    background: #daa71b;
+    background: #7c3aed;
     color: #fff;
 }
 .day-header h2 {
@@ -110,11 +110,11 @@ button:hover { background: #daa71b; }
     gap: 8px;
     align-items: center;
     padding: 6px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .day-body .row:first-of-type {
     font-weight: 700;
-    color: #444;
+    color: #a8b3cf;
 }
 .row {
     font-weight: normal;
@@ -124,7 +124,7 @@ button:hover { background: #daa71b; }
 input[type="number"], select, input[type="text"] {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid #39465e;
     border-radius: 6px;
     font-size: 14px;
 }
@@ -134,7 +134,7 @@ input[type="number"], select, input[type="text"] {
     margin-top: 10px;
 }
 .show-add {
-    background: #2b5876;
+    background: #0ea5e9;
     color: #fff;
     font-weight: 600;
     padding: 6px 12px;
@@ -142,7 +142,7 @@ input[type="number"], select, input[type="text"] {
     border-radius: 6px;
     cursor: pointer;
 }
-.show-add:hover { background: #1a3c54; }
+.show-add:hover { background: #0b74a5; }
 .add-row {
     display: flex;
     gap: 8px;
@@ -157,10 +157,10 @@ input[type="number"], select, input[type="text"] {
     font-weight: 600;
     cursor: pointer;
 }
-.save-add { background: #28a745; color: #fff; }
-.save-add:hover { background: #218838; }
-.cancel-add { background: #ccc; }
-.cancel-add:hover { background: #bbb; }
+.save-add { background: #22c55e; color: #fff; }
+.save-add:hover { background: #16a34a; }
+.cancel-add { background: #475569; }
+.cancel-add:hover { background: #64748b; }
 
 /* Edit/Delete buttons */
 .edit-btn, .del-btn {
@@ -170,10 +170,10 @@ input[type="number"], select, input[type="text"] {
     font-weight: 600;
     cursor: pointer;
 }
-.edit-btn { background: #007bff; color: #fff; }
-.edit-btn:hover { background: #0069d9; }
-.del-btn { background: #dc3545; color: #fff; }
-.del-btn:hover { background: #c82333; }
+.edit-btn { background: #3b82f6; color: #fff; }
+.edit-btn:hover { background: #2563eb; }
+.del-btn { background: #ef4444; color: #fff; }
+.del-btn:hover { background: #dc2626; }
 
 /* Utility */
 .hidden { display: none !important; }
