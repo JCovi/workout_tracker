@@ -70,6 +70,11 @@ function dayCard(day){
       position: 0
     };
     if (!payload.name) { alert('Enter exercise name'); return; }
+    if (!(payload.sets >= 1 && payload.sets <= 10)) { alert('Sets must be 1–10'); return; }
+    if (!(payload.reps >= 1 && payload.reps <= 20)) { alert('Reps must be 1–20'); return; }
+    if (!Number.isInteger(payload.weight_lbs) || payload.weight_lbs < 0) { alert('Weight must be ≥ 0'); return; }
+    if (!Number.isInteger(payload.rest_seconds) || payload.rest_seconds < 0) { alert('Rest must be ≥ 0'); return; }
+    
     const res = await api.addExercise(payload);
     if (res.error) { alert(res.error); return; }
     await loadExercisesInto(wrap, day.id);
@@ -80,23 +85,65 @@ function dayCard(day){
 }
 
 async function loadExercisesInto(card, dayId){
-  const rows = $('.rows', card);
-  rows.innerHTML = '';
-  const data = await api.exercises(dayId);
-  for(const ex of data){
-    const line = document.createElement('div');
-    line.className = 'row';
-    line.innerHTML = `
-      <div>${ex.name}</div>
-      <div>${ex.sets}</div>
-      <div>${ex.reps}</div>
-      <div>${ex.weight_lbs}</div>
-      <div>${ex.rest_seconds}</div>
-      <div></div>
-    `;
-    rows.appendChild(line);
+    const rows = $('.rows', card);
+    rows.innerHTML = '';
+    const data = await api.exercises(dayId);
+  
+    for(const ex of data){
+      const line = document.createElement('div');
+      line.className = 'row';
+      line.innerHTML = `
+        <div>${ex.name}</div>
+        <div>${ex.sets}</div>
+        <div>${ex.reps}</div>
+        <div>${ex.weight_lbs}</div>
+        <div>${ex.rest_seconds}</div>
+        <div style="display:flex; gap:6px;">
+          <button class="edit-btn">Edit</button>
+          <button class="del-btn">Delete</button>
+        </div>
+      `;
+  
+      // DELETE
+      $('.del-btn', line).addEventListener('click', async () => {
+        const sure = confirm(`Delete "${ex.name}"?`);
+        if (!sure) return;
+        const res = await fetch(`/exercises/${ex.id}`, { method: 'DELETE' });
+        if (!res.ok) { alert('Delete failed'); return; }
+        await loadExercisesInto(card, dayId);
+      });
+  
+      // EDIT (quick inline prompt-based)
+      $('.edit-btn', line).addEventListener('click', async () => {
+        const name = prompt('Exercise name:', ex.name);
+        if (name === null || name.trim() === '') return;
+  
+        const sets = Number(prompt('Sets (1–10):', ex.sets));
+        if (!Number.isInteger(sets) || sets < 1 || sets > 10) { alert('Sets must be 1–10'); return; }
+  
+        const reps = Number(prompt('Reps (1–20):', ex.reps));
+        if (!Number.isInteger(reps) || reps < 1 || reps > 20) { alert('Reps must be 1–20'); return; }
+  
+        const weight_lbs = Number(prompt('Weight (lb):', ex.weight_lbs));
+        if (!Number.isInteger(weight_lbs) || weight_lbs < 0) { alert('Weight must be ≥ 0'); return; }
+  
+        const rest_seconds = Number(prompt('Rest (sec):', ex.rest_seconds));
+        if (!Number.isInteger(rest_seconds) || rest_seconds < 0) { alert('Rest must be ≥ 0'); return; }
+  
+        const body = { name, sets, reps, weight_lbs, rest_seconds };
+        const res = await fetch(`/exercises/${ex.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) { alert('Update failed'); return; }
+        await loadExercisesInto(card, dayId);
+      });
+  
+      rows.appendChild(line);
+    }
   }
-}
+  
 
 async function init(){
   const daysWrap = $('#days');

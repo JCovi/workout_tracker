@@ -25,3 +25,11 @@ button:hover { background:#f4f4f4; }
 input[type="number"], select, input[type="text"] { width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:6px; }
 .add-btn { padding:8px 12px; border:0; background:#111; color:#fff; border-radius:8px; cursor:pointer; }
 .add-btn:hover { opacity:.9; }
+
+.edit-btn, .del-btn {
+    padding:6px 10px; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer;
+  }
+  .edit-btn:hover { background:#eef7ff; }
+  .del-btn { border-color:#f3d1d1; }
+  .del-btn:hover { background:#ffecec; }
+  
