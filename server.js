@@ -1,47 +1,79 @@
 // server.js
+require('dotenv').config();
+
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 
-// Ensure MYSQL_URL is set
+/* ---------------------------
+   Env & MySQL connection
+--------------------------- */
 if (!process.env.MYSQL_URL) {
   console.error('Missing MYSQL_URL environment variable. Set it to your Railway MySQL connection string.');
   process.exit(1);
 }
 
-// CORS: allow localhost and your Vercel domain (replace placeholder with your actual Vercel URL)
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://workout-tracker-flame.vercel.app/', // <-- replace with your Vercel deploy URL
-].filter(Boolean);
-
-app.use(cors({
-  origin: function (origin, cb) {
-    // allow same-origin/no-origin (curl, health checks)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS blocked: ' + origin), false);
-  },
-  credentials: false
-}));
-
-app.use(express.json());
-app.use(express.static('public')); // serves frontend if present in /public
-
-// MySQL connection using single connection string (Railway)
+// Create a pool from a single connection string (works with Railway/Render)
 const pool = mysql.createPool(process.env.MYSQL_URL);
 
-// --- helpers ---
+// Optional: quick connection test on boot
+pool.getConnection((err, conn) => {
+  if (err) {
+    console.error('DB connection failed at startup:', err.message);
+  } else {
+    console.log('DB connection OK at startup.');
+    conn.release();
+  }
+});
+
+/* ---------------------------
+   CORS (allow localhost + Vercel)
+--------------------------- */
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:5173',            // if you ever use Vite locally
+  'https://workout-tracker-flame.vercel.app', // your Vercel frontend
+]);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Same-origin / server-to-server / curl have no Origin header -> allow
+    if (!origin) return cb(null, true);
+
+    // Exact allow-list
+    if (allowedOrigins.has(origin)) return cb(null, true);
+
+    // Any of your preview deploys like https://foo-bar.vercel.app
+    if (origin.endsWith('.vercel.app')) return cb(null, true);
+
+    return cb(new Error('CORS blocked: ' + origin), false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
+
+// Handle preflight quickly
+app.options('*', cors());
+
+/* ---------------------------
+   Middleware & static
+--------------------------- */
+app.use(express.json());
+app.use(express.static('public')); // serves /public (index.html, app.js, styles.css) when you run the API locally
+
+/* ---------------------------
+   Helpers
+--------------------------- */
 const isInt = (v) => Number.isInteger(v);
 const inRange = (v, min, max) => isInt(v) && v >= min && v <= max;
 
-// --- routes ---
-
-// Basic health
+/* ---------------------------
+   Health
+--------------------------- */
 app.get('/', (_req, res) => res.send('Server is running!'));
+
 app.get('/healthz', (_req, res) => {
   pool.query('SELECT 1', (err) => {
     if (err) return res.status(500).json({ ok: false, error: err.message });
@@ -49,6 +81,9 @@ app.get('/healthz', (_req, res) => {
   });
 });
 
+/* ---------------------------
+   API routes
+--------------------------- */
 // GET all days
 app.get('/days', (_req, res) => {
   pool.query('SELECT * FROM days ORDER BY position', (err, rows) => {
@@ -57,8 +92,7 @@ app.get('/days', (_req, res) => {
   });
 });
 
-// GET exercises for a given day
-// /exercises?day_id=1
+// GET exercises for a given day: /exercises?day_id=1
 app.get('/exercises', (req, res) => {
   const dayId = Number(req.query.day_id);
   if (!isInt(dayId)) return res.status(400).json({ error: 'day_id required (int)' });
@@ -77,13 +111,15 @@ app.get('/exercises', (req, res) => {
 app.post('/exercises', (req, res) => {
   const { day_id, name, sets, reps, weight_lbs = 0, rest_seconds = 0, position = 0 } = req.body;
 
-  if (!isInt(day_id) || !name || !inRange(sets, 1, 10) || !inRange(reps, 1, 20))
+  if (!isInt(day_id) || !name || !inRange(sets, 1, 10) || !inRange(reps, 1, 20)) {
     return res.status(400).json({ error: 'Invalid body: day_id(int), name, sets(1-10), reps(1-20) required' });
+  }
 
   const w = Number(weight_lbs);
   const r = Number(rest_seconds);
-  if (!isInt(w) || w < 0 || !isInt(r) || r < 0)
+  if (!isInt(w) || w < 0 || !isInt(r) || r < 0) {
     return res.status(400).json({ error: 'weight_lbs>=0, rest_seconds>=0 (ints)' });
+  }
 
   pool.execute(
     `INSERT INTO exercises (day_id, name, sets, reps, weight_lbs, rest_seconds, position)
@@ -110,8 +146,9 @@ app.put('/exercises/:id', (req, res) => {
       if (k === 'sets' && !inRange(req.body[k], 1, 10)) return res.status(400).json({ error: 'sets 1-10' });
       if (k === 'reps' && !inRange(req.body[k], 1, 20)) return res.status(400).json({ error: 'reps 1-20' });
       if ((k === 'weight_lbs' || k === 'rest_seconds' || k === 'position' || k === 'day_id')
-          && (!isInt(Number(req.body[k])) || Number(req.body[k]) < 0))
+          && (!isInt(Number(req.body[k])) || Number(req.body[k]) < 0)) {
         return res.status(400).json({ error: `${k} must be non-negative int` });
+      }
 
       fields.push(`${k} = ?`);
       values.push(req.body[k]);
@@ -138,7 +175,7 @@ app.delete('/exercises/:id', (req, res) => {
   });
 });
 
-// Test DB route
+// Simple DB test
 app.get('/db/test', (_req, res) => {
   pool.query('SELECT * FROM days ORDER BY position', (err, results) => {
     if (err) return res.status(500).send('Database query failed');
@@ -146,12 +183,16 @@ app.get('/db/test', (_req, res) => {
   });
 });
 
-// Listen on dynamic port in prod
+/* ---------------------------
+   Start server
+--------------------------- */
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-// Basic error logging
+/* ---------------------------
+   Basic error logging
+--------------------------- */
 process.on('unhandledRejection', (e) => console.error('UnhandledRejection', e));
 process.on('uncaughtException', (e) => console.error('UncaughtException', e));

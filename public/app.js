@@ -7,7 +7,7 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const API_BASE =
   window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : 'https://YOUR-RENDER-SERVICE.onrender.com';
+    : 'https://workout-tracker-o5i4.onrender.com';
 
 // API
 const api = {
