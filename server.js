@@ -31,38 +31,27 @@ pool.getConnection((err, conn) => {
 /* ---------------------------
    CORS (allow localhost + Vercel)
 --------------------------- */
-const ALLOW_VERCEL_HOST = 'workout-tracker-flame.vercel.app'; // your vercel domain
-const ALLOW_GHPAGES_HOST = 'jcovi.github.io';                  // only if you need it
+const cors = require('cors');
 
-function isAllowedOrigin(origin) {
-  if (!origin) return true; // health checks, curl, server-to-server
-  try {
-    const { hostname, protocol } = new URL(origin);
-    if (protocol !== 'http:' && protocol !== 'https:') return false;
-
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-    if (hostname.endsWith('.vercel.app')) return true;
-    if (hostname === ALLOW_VERCEL_HOST) return true;
-
-    // uncomment this if you truly need GitHub Pages to call your API
-    if (hostname === ALLOW_GHPAGES_HOST) return true;
-
-    return false;
-  } catch {
-    return false;
-  }
-}
+// Allow localhost, any Vercel subdomain, and your Render domain
+const allowList = [
+  /^http:\/\/localhost(:\d+)?$/,
+  /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/,
+  /^https:\/\/workout-tracker-o5i4\.onrender\.com$/
+];
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (isAllowedOrigin(origin)) return cb(null, true);
-    console.error('CORS blocked:', origin);
-    return cb(new Error('CORS blocked: ' + origin), false);
-  },
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+    if (!origin) return cb(null, true); // same-origin, curl, health checks
+    try {
+      const ok = allowList.some(rx => rx.test(origin));
+      return ok ? cb(null, true) : cb(new Error('CORS blocked: ' + origin), false);
+    } catch (_) {
+      return cb(new Error('CORS check failed'), false);
+    }
+  }
 }));
-app.options('*', cors());
+
 /* ---------------------------
    Middleware & static
 --------------------------- */

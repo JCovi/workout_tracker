@@ -3,11 +3,10 @@ const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
 // Determine API base (local vs. production)
-// Replace the URL below with your actual Render backend URL.
 const API_BASE =
-  window.location.hostname === 'localhost'
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:3000'
-    : 'https://workout-tracker-o5l4.onrender.com';
+    : 'https://workout-tracker-o5i4.onrender.com'; // <-- your Render backend URL
 
 // API
 const api = {
