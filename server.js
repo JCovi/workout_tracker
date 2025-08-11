@@ -39,6 +39,8 @@ const allowList = [
   /^https:\/\/workout-tracker-o5i4\.onrender\.com$/
 ];
 
+app.use(cors({ origin: true }));
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // same-origin, curl, health checks
@@ -190,3 +192,7 @@ app.listen(port, () => {
 --------------------------- */
 process.on('unhandledRejection', (e) => console.error('UnhandledRejection', e));
 process.on('uncaughtException', (e) => console.error('UncaughtException', e));
+
+app.get('/debug/origin', (req, res) => {
+    res.json({ origin: req.headers.origin || null });
+  });
